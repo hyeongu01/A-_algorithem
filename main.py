@@ -1,15 +1,28 @@
 import pygame
 import math
 import random
+import argparse
+# import checkbox
+
+# parser 선언부
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-size', '--screen_size', nargs=2, type=int, default=[600, 600], metavar=("X", "Y"))
+parser.add_argument('-obs_ratio', '--inc_obstacle_ratio', type=float, default=0.2, metavar="obs_ratio")
+
+args = parser.parse_args()
 
 # 화면 크기 및 큐브 크기 설정
-screen_x = 600
-screen_y = 600
+screen_x = args.screen_size[0]
+screen_y = args.screen_size[1]
 
 # 큐브 격자 크기 설정
-cube_size = [30, 30]
+cube_size = (30, 30)
 cube_size_x = screen_x // cube_size[0]
 cube_size_y = screen_y // cube_size[1]
+
+# obstacle_ratio 설정
+random_rate = args.inc_obstacle_ratio
 
 # 색깔 정의
 WHITE = (255, 255, 255)
@@ -20,6 +33,7 @@ RED = (255, 0, 0)
 EMERALD = (97, 223, 182)
 YELLOW = (255, 255, 0)
 SKYBLUE = (135, 206, 235)
+WHITEGRAY = (207, 207, 207)
 
 # 큐브 상태 정의
 CUBE_STATES = {
@@ -65,7 +79,7 @@ def draw_button_all(screen):
     padding = 10
     button_size_x = 110
     button_size_y = 25
-    position = (screen_x - button_size_x - padding, screen_y - button_size_y * 3 - 10 - padding)
+    position = (screen_x - button_size_x - padding, screen_y - button_size_y * 3 - 10 - padding) 
     draw_button(screen, (position[0], position[1]), (button_size_x, button_size_y), "A* Start")
     draw_button(screen, (position[0], position[1] + 30), (button_size_x, button_size_y), "Clear obs")
     draw_button(screen, (position[0], position[1] + 60), (button_size_x, button_size_y), "Random obs")
@@ -109,7 +123,7 @@ def random_obs(cubes, random_rate):
         for k in j:
             if k == 1:
                 i+= 1
-    print(i)
+    
     
 MANHATTAN = 0
 EUCLIDEAN = 1
@@ -135,18 +149,18 @@ PARENT = 4
 def get_start_info(nodes, start_node, goal_node, manhattan):
     open_list = []
     close_list = [[start_node, 0, 0, 0, None]]
-    print("compare: ", start_node)
+    # print("compare: ", start_node)
     for i in possible_path(nodes, start_node):
         node_id = i
         g = 1
         if manhattan:
-            h = get_euclidean_distance(i, goal_node)
-        else:
             h = get_manhattan_distance(i, goal_node)
+        else:
+            h = get_euclidean_distance(i, goal_node)
         f = g + h
         parent_node = start_node
         open_list.append([node_id, f, g, h, parent_node])
-        print("append ", [node_id, f, g, h, parent_node])
+        # print("append ", [node_id, f, g, h, parent_node])
     return open_list, close_list
 
 def update_open_info(nodes, parent_node_info, goal_node, manhattan):
@@ -155,9 +169,9 @@ def update_open_info(nodes, parent_node_info, goal_node, manhattan):
         node_id = i
         g = parent_node_info[2] + 1
         if manhattan:
-            h = get_euclidean_distance(i, goal_node)
-        else:
             h = get_manhattan_distance(i, goal_node)
+        else:
+            h = get_euclidean_distance(i, goal_node)
         f = g + h
         parent_node = parent_node_info[0]
         open_list.append([node_id, f, g, h, parent_node])
@@ -200,7 +214,7 @@ def get_result_path(close_list):
     
 
 
-def A_star(nodes, start_node, goal_node, screen, manhattan=MANHATTAN):
+def A_star(nodes, start_node, goal_node, screen, manhattan=True):
     clear_nodes(nodes)
     open_list = None
     close_list = None
@@ -214,6 +228,7 @@ def A_star(nodes, start_node, goal_node, screen, manhattan=MANHATTAN):
             open_list = sorted(open_list, key=lambda x: x[1], reverse=True)
             if len(open_list) == 0:
                 close_list = sorted(close_list, key=lambda x: x[1], reverse=True)
+                print(len(close_list))
                 print("path not founded!")
                 return get_result_path(close_list)
             compare_node_info = open_list.pop()
@@ -225,11 +240,11 @@ def A_star(nodes, start_node, goal_node, screen, manhattan=MANHATTAN):
             nodes[close_node[0]][close_node[1]] = 5
             
             open_list_nodes = update_open_info(nodes, compare_node_info, goal_node, manhattan)
-            print("compare: ", compare_node_info)
+            # print("compare: ", compare_node_info)
             for o in open_list_nodes:
                 o_open_list_node = None
                 col = None
-                print(o)
+                # print(o)
                 for n, o_open_list in enumerate(open_list):
                     if o[NODE_ID] == o_open_list[NODE_ID]:
                         o_open_list_node = o
@@ -241,32 +256,86 @@ def A_star(nodes, start_node, goal_node, screen, manhattan=MANHATTAN):
                     continue
                 else:
                     open_list.append(o)
-                    
-            print(" -- open_list -- ")
-            for i in open_list:
-                print(i)
-            print(" -- close_list -- ")
-            for i in close_list:
-                print(i)
-            print(len(open_list), len(close_list))
         
         color_open_list(nodes, open_list)
         draw_cubes(screen, nodes)
         draw_grid(screen)
         pygame.display.flip()
         # time.sleep(1)
-        print("----")
-    
+        # print("----")
+    h = None
+    if manhattan:
+        h = "Manhattan"
+    else:
+        h = "Euclidean"
+        
+    print("number of explored nodes: ", len(close_list) - 1, " in ", h)
     # color_open_list(nodes, open_list)
     result = get_result_path(close_list)
     return result
         
+# Checkbox class
+class Checkbox:
+    def __init__(self, x, y, text, status=False):
+        self.rect = pygame.Rect(x, y, 15, 15)
+        self.checked = status
+        self.text = text
 
+    def draw(self, screen):
+        font = pygame.font.SysFont(None, 20)
+        pygame.draw.rect(screen, BLACK, self.rect, 2)
+        if self.checked:
+            button_font = pygame.font.SysFont(None, 30)
+            checked = button_font.render("*", True, BLACK)
+            padding = 3
+            screen.blit(checked, (self.rect.x + padding, self.rect.y + padding))
+        text_surface = font.render(self.text, True, BLACK)
+        screen.blit(text_surface, (self.rect.right + 5, self.rect.centery - text_surface.get_height() // 2))
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                if self.checked:
+                    return False
+                else:
+                    self.checked = True
+                    return True
+    
+    def _toggle(self):
+        self.checked = not self.checked
+    
+    def is_checked(self):
+        return self.checked
+                
+def draw_checkbox_background(screen, position, size):
+    background = pygame.Rect(position[0], position[1], size[0], size[1])
+    pygame.draw.rect(screen, WHITEGRAY, background, 0, 5)
+
+def draw_checkbox(screen, checkbox_list, position, title):
+    size = (110, 70)
+    font = pygame.font.SysFont(None, 30)
+    title_text = font.render(title, True, BLACK)
+    draw_checkbox_background(screen, position, size)
+    screen.blit(title_text, (position[0] + 5, position[1] + 5))
+    for checkbox in checkbox_list:
+        checkbox.draw(screen)
+    
+def checkbox_event(checkbox_list, event):
+    for n, checkbox in enumerate(checkbox_list):
+        if checkbox.handle_event(event):
+            checkbox_list[n-1].checked = not checkbox_list[n-1].checked
+        
+    
 
 def main():
     pygame.init()
     screen = pygame.display.set_mode((screen_x, screen_y))
     pygame.display.set_caption("A* Algorithem")
+    
+    checkbox_position = (screen_x - 120, screen_y - 95 - 80)
+    manhattan = Checkbox(checkbox_position[0] + 5, checkbox_position[1] + 30, "Manhattan", True)
+    euclidean = Checkbox(checkbox_position[0] + 5, checkbox_position[1] + 30 + 15 + 5, "Euclidean")
+    checkbox_list = [manhattan, euclidean]
 
     cubes = [[0 for _ in range(cube_size[1])] for _ in range(cube_size[0])]
     
@@ -281,22 +350,22 @@ def main():
 
     clock = pygame.time.Clock()
     running = True
-    random_rate = 0.2
 
     result = None
     while running:
         for event in pygame.event.get():
+            checkbox_event(checkbox_list, event)
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:  # 마우스 클릭 누를 때
                 x, y = pygame.mouse.get_pos()
                 cube_x = x // cube_size_x
                 cube_y = y // cube_size_y
-                print(x, y)
+                # print(x, y)
                 
                 if is_on_button((x, y), start_button):
-                    result = A_star(cubes, start_cube, goal_cube, screen)
-                    print(result)
+                    result = A_star(cubes, start_cube, goal_cube, screen, manhattan.is_checked())
+                    # print(result)
                 elif is_on_button((x, y), clear_button):
                     clear_obs(cubes)
                 elif is_on_button((x, y), random_button):
@@ -333,11 +402,11 @@ def main():
                             start_cube = (cube_x, cube_y)
                         else:
                             goal_cube = (cube_x, cube_y)
-                    print("")
-                    print(f"start: ({start_cube[0]}, {start_cube[1]})")
-                    print(f"goal: ({goal_cube[0]}, {goal_cube[1]})")
-                    print(f"mangattan distance: {get_manhattan_distance(start_cube, goal_cube)}")
-                    print(f"Euclidean distance: {get_euclidean_distance(start_cube, goal_cube)}")
+                    # print("")
+                    # print(f"start: ({start_cube[0]}, {start_cube[1]})")
+                    # print(f"goal: ({goal_cube[0]}, {goal_cube[1]})")
+                    # print(f"mangattan distance: {get_manhattan_distance(start_cube, goal_cube)}")
+                    # print(f"Euclidean distance: {get_euclidean_distance(start_cube, goal_cube)}")
                 selected_cube = None
                 selected_offset = None
                 
@@ -369,7 +438,7 @@ def main():
                         cubes[selected_offset[0]][selected_offset[1]] = 0
                         selected_offset = (cube_x, cube_y)
                         cubes[selected_offset[0]][selected_offset[1]] = selected_cube
-        
+            
         
         screen.fill(WHITE)
         draw_cubes(screen, cubes)
@@ -384,6 +453,7 @@ def main():
                     prev = node
         draw_grid(screen)
         start_button, clear_button, random_button = draw_button_all(screen)
+        draw_checkbox(screen, checkbox_list, checkbox_position, "Heuristic")
         pygame.display.flip()
         clock.tick(60)
 
